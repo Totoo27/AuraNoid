@@ -22,7 +22,10 @@ public class Ball {
         }
 
         // Rebote vertical
-        if (y <= 100 || y + diameter >= panelHeight) {
+        if(y + diameter >= panelHeight) {
+        System.out.println("¡Perdiste!");
+        }
+        if (y <= 100 ) {
             dy = -dy;
         }
     }
