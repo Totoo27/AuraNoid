@@ -12,6 +12,10 @@ import java.awt.event.ActionListener;
 import javax.swing.JLabel;
 import java.awt.Font;
 
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.AudioInputStream;
+import java.io.File;
 
 
 public class GamePanel extends JPanel implements ActionListener {
@@ -19,19 +23,40 @@ public class GamePanel extends JPanel implements ActionListener {
     private Ball ball;
     private Timer timer;
     private Player player;
-    private Bloques[][] bloques; 
+    private Bloques[][] bloques;
 
+    // Variables Niveles
+    
+    int nivel = 1;
+    
+    double probabilidadDuras = 0.1;
+    double vel_pelota = 5;
+    
+    int filas = 6;
+	int columnas = 8;
+	int ancho = 79;
+	int alto = 30;
+	
+	// Tiempo
+	private int segundos = 0;
+	private int minutos = 0;
+	
     
     // Labels
     private JLabel contador;
     private JLabel tiempo;
+    private JLabel textNivel;
     
     public int puntosJug = 0;
+    
+    private Bloques ultimoBloqueGolpeado = null;
 
     public GamePanel() {
+    	
     	inicializarBloques();
+    	
         setBackground(Color.BLACK);
-        ball = new Ball(320, 700, 20); // posición inicial y tamaño
+        ball = new Ball(320, 700, 20, vel_pelota); // posición inicial y tamaño
         timer = new Timer(10, this); // actualiza cada 10 ms
         timer.start();
         
@@ -41,7 +66,7 @@ public class GamePanel extends JPanel implements ActionListener {
         contador = new JLabel("Puntos: " + puntosJug);
         contador.setForeground(Color.WHITE); // color del texto
         contador.setFont(new Font("Arial", Font.BOLD, 30)); // fuente
-        contador.setBounds(10, 30, 200, 40); // posición y tamaño
+        contador.setBounds(20, 30, 200, 40); // posición y tamaño
         
         // Tiempo
         tiempo = new JLabel("00:00");
@@ -49,37 +74,60 @@ public class GamePanel extends JPanel implements ActionListener {
         tiempo.setFont(new Font("Arial", Font.BOLD, 30));
         tiempo.setBounds(315, 30, 200, 40);
         
+        // Tiempo
+        textNivel = new JLabel("Nivel " + nivel);
+        textNivel.setForeground(Color.WHITE);
+        textNivel.setFont(new Font("Arial", Font.BOLD, 30));
+        textNivel.setBounds(550, 30, 200, 40);
+        
+        // Jugador
         player = new Player(320, 700, 100, 15); // posición inicial y tamaño
         this.addKeyListener(player);
         this.setFocusable(true);
         this.requestFocus();
         
+        // Tiempo
+        
+        Timer timerTiempo = new Timer(1000, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                segundos++;
+                if (segundos == 60) {
+                    segundos = 0;
+                    minutos++;
+                }
+                // Formatear tiempo con dos dígitos
+                String tiempoStr = String.format("%02d:%02d", minutos, segundos);
+                tiempo.setText(tiempoStr);
+            }
+        });
+        timerTiempo.start();
+        
         // Usar layout absoluto para poder ubicar los labels
         this.setLayout(null);
         this.add(contador);
         this.add(tiempo);
+        this.add(textNivel);
         
         
     }
 
     private void inicializarBloques() {
-    	int anchopantalla=getWidth()+8;
-    	int ylineamarcador=100;
-    	 int filas = 6;
-    	    int columnas = 9;
-    	    int ancho = 70;  // ancho del bloque
-    	    int alto = 40;   // alto del bloque
+        int xInicio = 10;  // margen izquierdo
+        int yInicio = 110; // margen superior (después de marcador)
 
-    	    bloques = new Bloques[filas][columnas];
-    	    for (int i = 0; i < filas; i++) {
-    	        for (int j = 0; j < columnas; j++) {
-    	        	int x = anchopantalla + j * (ancho + 5);
-    	    	    int y = ylineamarcador + 10 + i * (alto + 5);
-    	            bloques[i][j] = new Bloques(x, y, ancho, alto, Color.RED);
-    	        }
-    	    }
-		
-	}
+        bloques = new Bloques[filas][columnas];
+        for (int i = 0; i < filas; i++) {
+            for (int j = 0; j < columnas; j++) {
+                int x = xInicio + j * (ancho + 5);
+                int y = yInicio + i * (alto + 5);
+
+                int vida = Math.random() < probabilidadDuras ? 2 : 1;
+                bloques[i][j] = new Bloques(x, y, ancho, alto, vida);
+            }
+        }
+    }
+
 
 	@Override
     protected void paintComponent(Graphics g) {
@@ -114,6 +162,7 @@ public class GamePanel extends JPanel implements ActionListener {
         
         // Choque pelota con jugador
         if (ball.getBounds().intersects(player.getBounds())) {
+        	reproducirSonido("src/sonidos/choque.wav");
             ball.dy = -ball.dy;
             ball.y = player.y - ball.diameter;
         }
@@ -121,26 +170,145 @@ public class GamePanel extends JPanel implements ActionListener {
         // Choque con bloques
         Colisionesconbloques();
         
+        // Verificar si se completó el nivel
+        if (nivelCompletado()) {
+            siguienteNivel();
+        }
+        
         repaint();
     }
+    
+    private boolean nivelCompletado() {
+        for (int i = 0; i < bloques.length; i++) {
+            for (int j = 0; j < bloques[i].length; j++) {
+                if (bloques[i][j].isVisible()) {
+                    return false; // queda al menos un bloque
+                }
+            }
+        }
+        return true; // todos destruidos
+    }
+    
+    private void siguienteNivel() {
+        nivel++;
+        textNivel.setText("Nivel " + nivel);
 
-	private void Colisionesconbloques() {
-		Rectangle pelotaRect = ball.getBounds();
+        // Aumentar dificultad
+        
+        if(nivel%3==0) { // Cada 3 Niveles sube velocidad
+        	vel_pelota += 0.5;
+        }
+        
+        // Cant Filas y Columnas
+        if(filas<10) {
+        	filas += 1;	
+        } else {
+        	
+        	double proxAncho;
+        	
+        	columnas += 1;
+        	proxAncho = 670 - columnas * 5;
+        	proxAncho /= columnas;
+        	
+        	System.out.print(proxAncho);	
+        	ancho = (int) Math.floor(proxAncho);
+        	System.out.print(ancho);
+        	
+        }
+        
+        // Probabilidad Bloques Duros
+        	
+        if(probabilidadDuras<0.8) {
+        	probabilidadDuras += 0.1;
+        }
+        
+        
+        
 
-	    for (int i = 0; i < bloques.length; i++) {
-	        for (int j = 0; j < bloques[i].length; j++) {
-	            Bloques b = bloques[i][j];
-	            
-	            if (b.isVisible() && pelotaRect.intersects(b.getBounds())) {
-	                b.setVisible(false);   // Romper bloque
-	                ball.dy = -ball.dy;    // Rebote vertical
-	                puntosJug++;           // Sumar puntos
-	                contador.setText("Puntos: " + puntosJug);
+        // Reiniciar pelota y jugador
+        ball = new Ball(320, 700, 20, vel_pelota);
+        this.removeKeyListener(player); // remover el viejo
+        player = new Player(320, 700, 100, 15);
+        this.addKeyListener(player);
+        this.requestFocus();
 
-	                return; 
-	            }
-	        }
-	    }
-		
-	}
+
+        // Crear nueva tanda de bloques
+        inicializarBloques();
+    }
+
+
+    private void Colisionesconbloques() {
+        Rectangle pelotaRect = ball.getBounds();
+
+        for (int i = 0; i < bloques.length; i++) {
+            for (int j = 0; j < bloques[i].length; j++) {
+                Bloques b = bloques[i][j];
+
+                if (b.isVisible() && pelotaRect.intersects(b.getBounds())) {
+                    // evitar doble golpe en el mismo bloque
+                    if (b == ultimoBloqueGolpeado) {
+                        return;
+                    }
+
+                    // posición anterior de la pelota
+                    double prevX = ball.x - ball.dx;
+                    double prevY = ball.y - ball.dy;
+
+                    // límites del bloque
+                    Rectangle r = b.getBounds();
+
+                    // determinar eje de colisión según posición anterior
+                    boolean colisionVertical = prevY + ball.diameter <= r.y || prevY >= r.y + r.height;
+                    boolean colisionHorizontal = prevX + ball.diameter <= r.x || prevX >= r.x + r.width;
+
+                    if (colisionVertical) {
+                        ball.dy = -ball.dy;
+                        if (prevY + ball.diameter <= r.y)
+                            ball.y = r.y - ball.diameter; // colocar arriba del bloque
+                        else
+                            ball.y = r.y + r.height;      // colocar abajo del bloque
+                    } else if (colisionHorizontal) {
+                        ball.dx = -ball.dx;
+                        if (prevX + ball.diameter <= r.x)
+                            ball.x = r.x - ball.diameter; // colocar a la izquierda
+                        else
+                            ball.x = r.x + r.width;       // colocar a la derecha
+                    } else {
+                        // colisión en esquina: invertir ambos ejes
+                        ball.dx = -ball.dx;
+                        ball.dy = -ball.dy;
+                    }
+
+                    b.recibirGolpe();
+                    if (!b.isVisible()) {
+                        puntosJug++;
+                        contador.setText("Puntos: " + puntosJug);
+                    }
+
+                    // recordar este bloque como el último golpeado
+                    ultimoBloqueGolpeado = b;
+                    return;
+                }
+            }
+        }
+
+        // si no hubo colisión, resetear último bloque golpeado
+        ultimoBloqueGolpeado = null;
+    }
+    
+    // Reproducir Sonidos
+    
+    private void reproducirSonido(String rutaArchivo) {
+        try {
+            AudioInputStream audioInput = AudioSystem.getAudioInputStream(new File(rutaArchivo));
+            Clip clip = AudioSystem.getClip();
+            clip.open(audioInput);
+            clip.start();
+        } catch (Exception e) {
+            System.out.println("Error al reproducir sonido: " + e.getMessage());
+        }
+    }
+
+
 }

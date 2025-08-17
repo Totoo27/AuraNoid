@@ -7,7 +7,7 @@ import java.awt.event.KeyListener;
 public class Player implements KeyListener {
     public int x, y, width, height;
     public int dx = 0; // velocidad horizontal
-    public int speed = 5;
+    public int speed = 7;
 
     public Player(int startX, int startY, int width, int height) {
         this.x = startX;

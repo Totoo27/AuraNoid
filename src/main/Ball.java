@@ -4,12 +4,17 @@ import java.awt.Rectangle;
 
 public class Ball {
     public int x, y, diameter;
-    public int dx = 5, dy = 5; // velocidad
+    public double velocidad = 5; // Default
+    public double dx = velocidad, dy = velocidad; // velocidad
      
-    public Ball(int x, int y, int diameter) {
+    public Ball(int x, int y, int diameter, double velocidad) {
         this.x = x;
         this.y = y;
         this.diameter = diameter;
+        this.velocidad = velocidad;
+        
+        dx = velocidad;
+        dy = velocidad;
     }
 
     public void move(int panelWidth, int panelHeight) {
@@ -23,7 +28,7 @@ public class Ball {
 
         // Rebote vertical
         if(y + diameter >= panelHeight) {
-        System.out.println("¡Perdiste!");
+        System.out.println("chau");
         }
         if (y <= 100 ) {
             dy = -dy;
