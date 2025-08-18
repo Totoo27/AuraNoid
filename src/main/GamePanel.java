@@ -19,7 +19,7 @@ import java.io.File;
 
 
 public class GamePanel extends JPanel implements ActionListener {
-
+	private boolean gameOver = false;  // << NUEVO
     private Ball ball;
     private Timer timer;
     private Player player;
@@ -56,9 +56,8 @@ public class GamePanel extends JPanel implements ActionListener {
     	inicializarBloques();
     	
         setBackground(Color.BLACK);
-        ball = new Ball(320, 700, 20, vel_pelota); // posición inicial y tamaño
         timer = new Timer(10, this); // actualiza cada 10 ms
-        timer.start();
+        
         
         // ---- Labels
         
@@ -79,27 +78,41 @@ public class GamePanel extends JPanel implements ActionListener {
         textNivel.setForeground(Color.WHITE);
         textNivel.setFont(new Font("Arial", Font.BOLD, 30));
         textNivel.setBounds(550, 30, 200, 40);
-        
-        // Jugador
-        player = new Player(320, 700, 100, 15); // posición inicial y tamaño
-        this.addKeyListener(player);
-        this.setFocusable(true);
-        this.requestFocus();
-        
+      
         // Tiempo
         
         Timer timerTiempo = new Timer(1000, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                segundos++;
-                if (segundos == 60) {
-                    segundos = 0;
-                    minutos++;
-                }
-                // Formatear tiempo con dos dígitos
-                String tiempoStr = String.format("%02d:%02d", minutos, segundos);
-                tiempo.setText(tiempoStr);
-            }
+        	@Override
+        	public void actionPerformed(ActionEvent e) {
+        	    if (!gameOver) {
+        	        ball.move(getWidth(), getHeight());
+        	        player.move(getWidth());
+
+        	        // Choque pelota con jugador
+        	        if (ball.getBounds().intersects(player.getBounds())) {
+        	            reproducirSonido("src/sonidos/choque.wav");
+        	            ball.dy = -ball.dy;
+        	            ball.y = player.y - ball.diameter;
+        	        }
+
+        	        // Choque con bloques
+        	        Colisionesconbloques();
+
+        	        // Verificar si se completó el nivel
+        	        if (nivelCompletado()) {
+        	            siguienteNivel();
+        	        }
+
+        	        // 🔹 Verificar si tocó el piso
+        	        if (ball.y + ball.diameter >= getHeight()) {
+        	            gameOver = true;
+        	            timer.stop(); // detiene el juego
+        	        }
+        	    }
+
+        	    repaint();
+        	}
+
         });
         timerTiempo.start();
         
@@ -111,6 +124,27 @@ public class GamePanel extends JPanel implements ActionListener {
         
         
     }
+    
+    public void iniciarJuego() {
+        // Reiniciar variables
+        segundos = 0;
+        minutos = 0;
+        puntosJug = 0;
+
+        // Reiniciar pelota y jugador
+        ball = new Ball(320, 700, 20, vel_pelota);
+        this.removeKeyListener(player);
+        player = new Player(320, 700, 100, 15);
+        this.addKeyListener(player);
+        this.requestFocus();
+
+        inicializarBloques();
+
+        // Ahora sí arranca el juego
+        timer.start();
+    }
+
+
 
     private void inicializarBloques() {
         int xInicio = 10;  // margen izquierdo
@@ -129,31 +163,38 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
 
-	@Override
+    @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-       
+
+
+        // Si terminó el juego, mostrar cartel por encima
+        if (gameOver) {
+            g.setColor(Color.RED);
+            g.setFont(new Font("Arial", Font.BOLD, 60));
+            g.drawString("GAME OVER", getWidth()/2 - 180, getHeight()/2);
+        }
         // Pelota
         g.setColor(Color.WHITE);
         g.fillOval(ball.x, ball.y, ball.diameter, ball.diameter);
-        
+
         // Jugador
         g.setColor(Color.WHITE);
         g.fillRect(player.x, player.y, player.width, player.height);
-        
+
         // Línea de Marcador
         g.setColor(Color.WHITE);
         int y = 100;
         g.fillRect(0, y-5, getWidth(), 5);
-        
+
         // Dibujar bloques
         for (int i = 0; i < bloques.length; i++) {
             for (int j = 0; j < bloques[i].length; j++) {
                 bloques[i][j].dibujar(g);
             }
         }
-
     }
+
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -172,6 +213,7 @@ public class GamePanel extends JPanel implements ActionListener {
         
         // Verificar si se completó el nivel
         if (nivelCompletado()) {
+        	
             siguienteNivel();
         }
         
@@ -241,61 +283,73 @@ public class GamePanel extends JPanel implements ActionListener {
     private void Colisionesconbloques() {
         Rectangle pelotaRect = ball.getBounds();
 
+        boolean golpeoBloque = false; // Nuevo: para controlar si hubo colisión
+
         for (int i = 0; i < bloques.length; i++) {
             for (int j = 0; j < bloques[i].length; j++) {
                 Bloques b = bloques[i][j];
 
                 if (b.isVisible() && pelotaRect.intersects(b.getBounds())) {
                     // evitar doble golpe en el mismo bloque
-                    if (b == ultimoBloqueGolpeado) {
-                        return;
+                    if (b != ultimoBloqueGolpeado) {
+
+                        // posición anterior de la pelota
+                        double prevX = ball.x - ball.dx;
+                        double prevY = ball.y - ball.dy;
+
+                        // límites del bloque
+                        Rectangle r = b.getBounds();
+
+                        // determinar eje de colisión según posición anterior
+                        boolean colisionVertical = prevY + ball.diameter <= r.y || prevY >= r.y + r.height;
+                        boolean colisionHorizontal = prevX + ball.diameter <= r.x || prevX >= r.x + r.width;
+
+                        if (colisionVertical) {
+                            ball.dy = -ball.dy;
+                            if (prevY + ball.diameter <= r.y)
+                                ball.y = r.y - ball.diameter; // colocar arriba del bloque
+                            else
+                                ball.y = r.y + r.height;      // colocar abajo del bloque
+                        } else if (colisionHorizontal) {
+                            ball.dx = -ball.dx;
+                            if (prevX + ball.diameter <= r.x)
+                                ball.x = r.x - ball.diameter; // colocar a la izquierda
+                            else
+                                ball.x = r.x + r.width;       // colocar a la derecha
+                        } else {
+                            // colisión en esquina: invertir ambos ejes
+                            ball.dx = -ball.dx;
+                            ball.dy = -ball.dy;
+                        }
+
+                        b.recibirGolpe();
+                        if (!b.isVisible()) {
+                            puntosJug++;
+                            contador.setText("Puntos: " + puntosJug);
+                        }
+
+                        // recordar este bloque como el último golpeado
+                        ultimoBloqueGolpeado = b;
+                        golpeoBloque = true; // marcamos que hubo colisión
                     }
-
-                    // posición anterior de la pelota
-                    double prevX = ball.x - ball.dx;
-                    double prevY = ball.y - ball.dy;
-
-                    // límites del bloque
-                    Rectangle r = b.getBounds();
-
-                    // determinar eje de colisión según posición anterior
-                    boolean colisionVertical = prevY + ball.diameter <= r.y || prevY >= r.y + r.height;
-                    boolean colisionHorizontal = prevX + ball.diameter <= r.x || prevX >= r.x + r.width;
-
-                    if (colisionVertical) {
-                        ball.dy = -ball.dy;
-                        if (prevY + ball.diameter <= r.y)
-                            ball.y = r.y - ball.diameter; // colocar arriba del bloque
-                        else
-                            ball.y = r.y + r.height;      // colocar abajo del bloque
-                    } else if (colisionHorizontal) {
-                        ball.dx = -ball.dx;
-                        if (prevX + ball.diameter <= r.x)
-                            ball.x = r.x - ball.diameter; // colocar a la izquierda
-                        else
-                            ball.x = r.x + r.width;       // colocar a la derecha
-                    } else {
-                        // colisión en esquina: invertir ambos ejes
-                        ball.dx = -ball.dx;
-                        ball.dy = -ball.dy;
-                    }
-
-                    b.recibirGolpe();
-                    if (!b.isVisible()) {
-                        puntosJug++;
-                        contador.setText("Puntos: " + puntosJug);
-                    }
-
-                    // recordar este bloque como el último golpeado
-                    ultimoBloqueGolpeado = b;
-                    return;
+                    // rompemos solo el bucle interior, no toda la función
+                    break;
                 }
             }
         }
 
         // si no hubo colisión, resetear último bloque golpeado
-        ultimoBloqueGolpeado = null;
+        if (!golpeoBloque) {
+            ultimoBloqueGolpeado = null;
+        }
+
+        // 🔹 Verificar game over después de todas las colisiones
+        if (ball.y + ball.diameter >= getHeight()) {
+            gameOver = true;
+            timer.stop();
+        }
     }
+
     
     // Reproducir Sonidos
     

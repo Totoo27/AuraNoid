@@ -3,7 +3,7 @@ package main;
 import javax.swing.JFrame;
 import java.awt.EventQueue;
 
-public class Main {
+/* public class Main {
     public static void main(String[] args) {
     	
     	final int WIDTH = 700;
@@ -21,4 +21,4 @@ public class Main {
             frame.setVisible(true);
         });
     }
-}
+} */
