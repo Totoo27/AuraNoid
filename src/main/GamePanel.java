@@ -11,6 +11,7 @@ import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import java.awt.Font;
@@ -18,7 +19,13 @@ import java.awt.Font;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.sound.sampled.AudioInputStream;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
 
 public class GamePanel extends JPanel implements ActionListener {
@@ -55,6 +62,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private JLabel contador;
     private JLabel tiempo;
     private JLabel textNivel;
+    
+    private int highLevel = 0;
+    private int bestMin = 0;
+    private int bestSec = 0;
+
     
     public int puntosJug = 0;
     
@@ -136,9 +148,27 @@ public class GamePanel extends JPanel implements ActionListener {
         this.add(textNivel);
      // ---- Botón Reiniciar
         btnReiniciar = new JButton("Volver a jugar");
-        btnReiniciar.setBounds(getWidth()/2 - 100, getHeight()/2 + 80, 200, 50); // posición
-        btnReiniciar.setFont(new Font("Arial", Font.BOLD, 20));
-        btnReiniciar.setVisible(false); // inicialmente oculto
+
+     // Tamaño y posición centrada
+     int btnWidth = 220;
+     int btnHeight = 60;
+     int btnX = 250;
+     int btnY = 500;
+     btnReiniciar.setBounds(btnX, btnY, btnWidth, btnHeight);
+
+     // Fuente y colores
+     btnReiniciar.setFont(new Font("Arial", Font.BOLD, 24));
+     btnReiniciar.setForeground(Color.RED);            // texto rojo
+     btnReiniciar.setBackground(Color.BLACK);          // fondo negro
+     btnReiniciar.setOpaque(true);
+     btnReiniciar.setBorderPainted(true);
+     btnReiniciar.setFocusPainted(false);              // sin efecto de foco
+
+     // Borde rojo grueso
+     btnReiniciar.setBorder(BorderFactory.createLineBorder(Color.RED, 4));
+
+     // Hacer visible solo al game over
+     btnReiniciar.setVisible(false); // inicialmente oculto
         btnReiniciar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -201,22 +231,20 @@ public class GamePanel extends JPanel implements ActionListener {
     }
 
     private void cargarHighScore() {
-        try {
-            java.io.File file = new java.io.File(archivoHighScore);
-            if(file.exists()) {
-                java.util.Scanner sc = new java.util.Scanner(file);
-                if(sc.hasNextInt()) {
-                    highScore = sc.nextInt();
-                }
-                sc.close();
-            } else {
-                highScore = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader("records.txt"))) {
+            String linea = br.readLine();
+            if (linea != null) {
+                String[] datos = linea.split(";");
+                highScore = Integer.parseInt(datos[0]);
+                highLevel = Integer.parseInt(datos[1]);
+                bestMin = Integer.parseInt(datos[2]);
+                bestSec = Integer.parseInt(datos[3]);
             }
-        } catch(Exception e) {
-            System.out.println("Error al leer HighScore: " + e.getMessage());
-            highScore = 0;
+        } catch (IOException e) {
+            System.out.println("No se encontró archivo de récords, se crearán al guardar.");
         }
     }
+
     
     @Override
     protected void paintComponent(Graphics g) {
@@ -247,19 +275,34 @@ public class GamePanel extends JPanel implements ActionListener {
         	 
         	 return; // detiene temporalmente el juego hasta que termine la cuenta
         }
-
         if (gameOver) {
             g.setColor(Color.RED);
             g.setFont(new Font("Arial", Font.BOLD, 60));
-            g.drawString("GAME OVER", getWidth()/2 - 160, getHeight()/2);
+            g.drawString("GAME OVER", getWidth()/2 - 160, getHeight()/2 - 60);
 
             g.setColor(Color.WHITE);
             g.setFont(new Font("Arial", Font.BOLD, 30));
-            g.drawString("Puntaje Máximo: " + highScore, getWidth()/2 - 150, getHeight()/2 + 50);
+
+            int xIzquierda = 50;                  // lado izquierdo: partida actual
+            int xDerecha = getWidth() - 300;      // lado derecho: récords históricos
+            int yBase = getHeight()/2 - 20;
+            int yOffset = 40;
+
+            // 🔹 Resultados de la partida (actual)
+            g.drawString("Puntaje: " + puntosJug, xIzquierda, yBase);
+            g.drawString("Nivel: " + nivel, xIzquierda, yBase + yOffset);
+            g.drawString("Tiempo: " + String.format("%02d:%02d", minutos, segundos), xIzquierda, yBase + 2*yOffset);
+
+            // 🔹 Récords históricos
+            g.drawString("Record Puntaje: " + highScore, xDerecha, yBase);
+            g.drawString("Record Nivel: " + highLevel, xDerecha, yBase + yOffset);
+            g.drawString("Mejor Tiempo: " + String.format("%02d:%02d", bestMin, bestSec), xDerecha, yBase + 2*yOffset);
 
             btnReiniciar.setVisible(true);
             return;
         }
+
+
 
         
         // Pelota
@@ -437,23 +480,35 @@ public class GamePanel extends JPanel implements ActionListener {
         }
 
         // 🔹 Verificar game over después de todas las colisiones
+     // 🔹 Verificar game over después de todas las colisiones
         if (ball.y + ball.diameter >= getHeight()) {
             gameOver = true;
-            guardarHighScore();
+            
+            // Actualizar récords si la partida los supera
+            if (puntosJug > highScore) {
+                highScore = puntosJug;
+            }
+            
+            if (nivel > highLevel) {
+                highLevel = nivel;
+            }
+            
+            if (minutos > bestMin || (minutos == bestMin && segundos > bestSec)) {
+                bestMin = minutos;
+                bestSec = segundos;
+            }
+
+            guardarHighScore();  // ahora guarda los récords actualizados
             timer.stop();
         }
+
     }
 
     private void guardarHighScore() {
-        try {
-            if(puntosJug > highScore) {
-                highScore = puntosJug;
-                java.io.FileWriter writer = new java.io.FileWriter(archivoHighScore);
-                writer.write(String.valueOf(highScore));
-                writer.close();
-            }
-        } catch(Exception e) {
-            System.out.println("Error al guardar HighScore: " + e.getMessage());
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("records.txt"))) {
+            bw.write(highScore + ";" + highLevel + ";" + bestMin + ";" + bestSec);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

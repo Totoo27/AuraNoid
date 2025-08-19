@@ -8,7 +8,6 @@ public class GameMain extends JFrame {
     private JPanel mainPanel;
     private GamePanel gamePanel;
 
-    
     public GameMain() {
         setTitle("AuraNoid");
         setSize(700, 800);
@@ -33,6 +32,19 @@ public class GameMain extends JFrame {
         setVisible(true);
     }
 
+    // Función para crear botones con estilo uniforme
+    private JButton crearBoton(String texto, int ancho, int alto) {
+        JButton boton = new JButton(texto);
+        boton.setFont(new Font("Arial", Font.BOLD, 24));
+        boton.setForeground(Color.RED);             // letras rojas
+        boton.setBackground(Color.BLACK);           // fondo negro
+        boton.setOpaque(true);
+        boton.setBorder(BorderFactory.createLineBorder(Color.RED, 3)); // borde rojo
+        boton.setFocusPainted(false);               // quitar el borde azul al seleccionar
+        boton.setPreferredSize(new Dimension(ancho, alto));
+        return boton;
+    }
+
     private JPanel crearMenu() {
         JPanel menuPanel = new JPanel();
         menuPanel.setBackground(Color.BLACK);
@@ -40,23 +52,25 @@ public class GameMain extends JFrame {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 0, 15, 0);
 
+        // Título
         JLabel titulo = new JLabel("BRICK BREAKER");
         titulo.setFont(new Font("Arial", Font.BOLD, 40));
         titulo.setForeground(Color.WHITE);
         gbc.gridy = 0;
         menuPanel.add(titulo, gbc);
 
-        JButton startButton = new JButton("Jugar");
+        // Botón Jugar
+        JButton startButton = crearBoton("Jugar", 200, 50);
         gbc.gridy = 1;
         menuPanel.add(startButton, gbc);
 
-        JButton exitButton = new JButton("Salir");
+        // Botón Salir
+        JButton exitButton = crearBoton("Salir", 200, 50);
         gbc.gridy = 2;
         menuPanel.add(exitButton, gbc);
 
         // 🔹 Eventos de botones
         startButton.addActionListener(e -> {
-        	
             cardLayout.show(mainPanel, "Juego");
             gamePanel.requestFocus(); // activar teclado
             gamePanel.iniciarJuego();
