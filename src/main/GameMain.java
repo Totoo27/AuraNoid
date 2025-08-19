@@ -7,6 +7,7 @@ public class GameMain extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainPanel;
     private GamePanel gamePanel;
+
     
     public GameMain() {
         setTitle("AuraNoid");

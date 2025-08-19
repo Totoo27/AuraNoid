@@ -1,6 +1,7 @@
 package main;
 
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -9,6 +10,8 @@ import java.awt.Rectangle;
 import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import java.awt.Font;
 
@@ -20,10 +23,15 @@ import java.io.File;
 
 public class GamePanel extends JPanel implements ActionListener {
 	private boolean gameOver = false;  // << NUEVO
+	private JButton btnReiniciar;
     private Ball ball;
     private Timer timer;
     private Player player;
     private Bloques[][] bloques;
+    private final String archivoHighScore = "highscore.txt"; // nombre del archivo
+    private int highScore = 0; // puntuación máxima
+
+
 
     // Variables Niveles
     
@@ -121,15 +129,39 @@ public class GamePanel extends JPanel implements ActionListener {
         this.add(contador);
         this.add(tiempo);
         this.add(textNivel);
+     // ---- Botón Reiniciar
+        btnReiniciar = new JButton("Volver a jugar");
+        btnReiniciar.setBounds(getWidth()/2 - 100, getHeight()/2 + 80, 200, 50); // posición
+        btnReiniciar.setFont(new Font("Arial", Font.BOLD, 20));
+        btnReiniciar.setVisible(false); // inicialmente oculto
+        btnReiniciar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnReiniciar.setVisible(false);
+                gameOver = false;
+                reiniciarAplicacion();
+            }
+        });
+        this.add(btnReiniciar);
+
         
         
     }
     
+    public void reiniciarAplicacion() {
+        // Cierra la ventana actual
+        SwingUtilities.getWindowAncestor(this).dispose();
+        
+        // Crea una nueva instancia del JFrame principal
+        SwingUtilities.invokeLater(() -> new GameMain());
+    }
     public void iniciarJuego() {
         // Reiniciar variables
         segundos = 0;
         minutos = 0;
         puntosJug = 0;
+        cargarHighScore();
+
 
         // Reiniciar pelota y jugador
         ball = new Ball(320, 700, 20, vel_pelota);
@@ -162,18 +194,51 @@ public class GamePanel extends JPanel implements ActionListener {
         }
     }
 
+    private void cargarHighScore() {
+        try {
+            java.io.File file = new java.io.File(archivoHighScore);
+            if(file.exists()) {
+                java.util.Scanner sc = new java.util.Scanner(file);
+                if(sc.hasNextInt()) {
+                    highScore = sc.nextInt();
+                }
+                sc.close();
+            } else {
+                highScore = 0;
+            }
+        } catch(Exception e) {
+            System.out.println("Error al leer HighScore: " + e.getMessage());
+            highScore = 0;
+        }
+    }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
+        if (contadorEspera > 0) {
+            g.setColor(Color.YELLOW);
+            g.setFont(new Font("Arial", Font.BOLD, 60));
+            String texto = "Nivel " + nivel + " en: " + contadorEspera;
+            int anchoTexto = g.getFontMetrics().stringWidth(texto);
+            g.drawString(texto, getWidth()/2 - anchoTexto/2, getHeight()/2);
+            return; // detiene temporalmente el juego hasta que termine la cuenta
+        }
 
-        // Si terminó el juego, mostrar cartel por encima
         if (gameOver) {
             g.setColor(Color.RED);
             g.setFont(new Font("Arial", Font.BOLD, 60));
-            g.drawString("GAME OVER", getWidth()/2 - 180, getHeight()/2);
+            g.drawString("GAME OVER", getWidth()/2 - 160, getHeight()/2);
+
+            g.setColor(Color.WHITE);
+            g.setFont(new Font("Arial", Font.BOLD, 30));
+            g.drawString("Puntaje Máximo: " + highScore, getWidth()/2 - 150, getHeight()/2 + 50);
+
+            btnReiniciar.setVisible(true);
+            return;
         }
+
+        
         // Pelota
         g.setColor(Color.WHITE);
         g.fillOval(ball.x, ball.y, ball.diameter, ball.diameter);
@@ -231,53 +296,56 @@ public class GamePanel extends JPanel implements ActionListener {
         return true; // todos destruidos
     }
     
+ // 🔹 Variable de clase
+    private int contadorEspera = 0; // 0 = no mostrar, >0 = mostrar cuenta regresiva
+
     private void siguienteNivel() {
         nivel++;
         textNivel.setText("Nivel " + nivel);
 
         // Aumentar dificultad
-        
-        if(nivel%3==0) { // Cada 3 Niveles sube velocidad
-        	vel_pelota += 0.5;
+        if (nivel % 3 == 0) {
+            vel_pelota += 0.5;
         }
-        
-        // Cant Filas y Columnas
-        if(filas<10) {
-        	filas += 1;	
+
+        if (filas < 10) {
+            filas += 1;
         } else {
-        	
-        	double proxAncho;
-        	
-        	columnas += 1;
-        	proxAncho = 670 - columnas * 5;
-        	proxAncho /= columnas;
-        	
-        	System.out.print(proxAncho);	
-        	ancho = (int) Math.floor(proxAncho);
-        	System.out.print(ancho);
-        	
+            columnas += 1;
+            double proxAncho = (670 - columnas * 5) / (double) columnas;
+            ancho = (int) Math.floor(proxAncho);
         }
-        
-        // Probabilidad Bloques Duros
-        	
-        if(probabilidadDuras<0.8) {
-        	probabilidadDuras += 0.1;
+
+        if (probabilidadDuras < 0.8) {
+            probabilidadDuras += 0.1;
         }
-        
-        
-        
 
-        // Reiniciar pelota y jugador
-        ball = new Ball(320, 700, 20, vel_pelota);
-        this.removeKeyListener(player); // remover el viejo
-        player = new Player(320, 700, 100, 15);
-        this.addKeyListener(player);
-        this.requestFocus();
+        // 🔹 Detener el juego y activar contador de 3 segundos
+        timer.stop();
+        contadorEspera = 3;
 
-
-        // Crear nueva tanda de bloques
-        inicializarBloques();
+        Timer timerCuenta = new Timer(1000, null);
+        timerCuenta.addActionListener(e -> {
+            if (contadorEspera > 0) {
+                contadorEspera--;
+                repaint(); // dibuja el número en pantalla
+            } else {
+                timerCuenta.stop();
+                // Reiniciar pelota y jugador
+                ball = new Ball(320, 700, 20, vel_pelota);
+                removeKeyListener(player);
+                player = new Player(320, 700, 100, 15);
+                addKeyListener(player);
+                requestFocus();
+                // Crear nueva tanda de bloques
+                inicializarBloques();
+                // Volver a arrancar el juego
+                timer.start();
+            }
+        });
+        timerCuenta.start();
     }
+
 
 
     private void Colisionesconbloques() {
@@ -346,11 +414,24 @@ public class GamePanel extends JPanel implements ActionListener {
         // 🔹 Verificar game over después de todas las colisiones
         if (ball.y + ball.diameter >= getHeight()) {
             gameOver = true;
+            guardarHighScore();
             timer.stop();
         }
     }
 
-    
+    private void guardarHighScore() {
+        try {
+            if(puntosJug > highScore) {
+                highScore = puntosJug;
+                java.io.FileWriter writer = new java.io.FileWriter(archivoHighScore);
+                writer.write(String.valueOf(highScore));
+                writer.close();
+            }
+        } catch(Exception e) {
+            System.out.println("Error al guardar HighScore: " + e.getMessage());
+        }
+    }
+
     // Reproducir Sonidos
     
     private void reproducirSonido(String rutaArchivo) {
