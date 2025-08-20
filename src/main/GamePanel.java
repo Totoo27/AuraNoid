@@ -286,7 +286,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
         if (contadorEspera > 0) {
         	 
-        	 g.setFont(new Font("Arial", Font.BOLD, 60));
+        	 g.setFont(GameMain.Pixelart.deriveFont(50f);
 
         	 String linea1 = "Nivel Completado";
         	 String linea2 = "Siguiente en: " + contadorEspera + "...";
