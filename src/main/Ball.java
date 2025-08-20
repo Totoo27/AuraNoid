@@ -22,16 +22,19 @@ public class Ball {
         y += dy;
 
         // Rebote horizontal
-        if (x <= 0 || x + diameter >= panelWidth) {
+        if (x <= 0) {
             dx = -dx;
+            this.x = 0;
+        }
+        if ( x + diameter >= panelWidth) {
+        	dx = -dx;
+        	this.x = panelWidth - diameter;
         }
 
         // Rebote vertical
-        if(y + diameter >= panelHeight) {
-        System.out.println("chau");
-        }
         if (y <= 100 ) {
             dy = -dy;
+            this.y = 100;
         }
     }
 
