@@ -21,6 +21,7 @@ public class GameMain extends JFrame {
         setSize(700, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
         
 
         // Layout para alternar pantallas
