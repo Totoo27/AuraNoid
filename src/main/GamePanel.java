@@ -154,7 +154,7 @@ public class GamePanel extends JPanel implements ActionListener {
                     for (int i = balls.size() - 1; i >= 0; i--) {
                         Ball ball = balls.get(i);
                         if (ball.y + ball.diameter >= getHeight()) {
-                            balls.remove(i); // ✅ seguro porque no afecta los índices que quedan por recorrer
+                            balls.remove(i); // seguro porque no afecta los índices que quedan por recorrer
                             if (balls.isEmpty()) {
                                 gameOver = true;
                                 guardarHighScore();
@@ -476,7 +476,7 @@ public class GamePanel extends JPanel implements ActionListener {
         	return true; // todos destruidos
     }
     
- // 🔹 Variable de clase
+ // Variable de clase
     private int contadorEspera = 0; // 0 = no mostrar, >0 = mostrar cuenta regresiva
 
     private void siguienteNivel() {
@@ -614,7 +614,7 @@ public class GamePanel extends JPanel implements ActionListener {
             for (int i = balls.size() - 1; i >= 0; i--) {
                 Ball ball = balls.get(i);
                 if (ball.y + ball.diameter >= getHeight()) {
-                    balls.remove(i); // ✅ seguro porque no afecta los índices que quedan por recorrer
+                    balls.remove(i); // seguro porque no afecta los índices que quedan por recorrer
                     if (balls.isEmpty()) {
                         gameOver = true;
                         
@@ -671,7 +671,7 @@ public class GamePanel extends JPanel implements ActionListener {
             AudioInputStream audioInput = AudioSystem.getAudioInputStream(new File(rutaArchivo));
             Clip clip = AudioSystem.getClip();
             clip.open(audioInput);
-            clip.loop(Clip.LOOP_CONTINUOUSLY); // 🔁 bucle infinito
+            clip.loop(Clip.LOOP_CONTINUOUSLY); // bucle infinito
             clip.start();
         } catch (Exception e) {
             System.out.println("Error al reproducir música: " + e.getMessage());
