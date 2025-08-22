@@ -56,11 +56,11 @@ public class GameMain extends JFrame {
     }
 
     private JPanel crearMenu() {
-        // 🔹 Cargar imagen de fondo
+        // Cargar imagen de fondo
         ImageIcon fondoIcon = new ImageIcon("src/resources/portada.png");
         Image fondo = fondoIcon.getImage();
 
-        // 🔹 Crear panel personalizado
+        // Crear panel personalizado
         JPanel menuPanel = new JPanel(new GridBagLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -100,7 +100,7 @@ public class GameMain extends JFrame {
         gbc.gridy = 2;
         menuPanel.add(exitButton, gbc);
 
-        // 🔹 Eventos de botones
+        // Eventos de botones
         startButton.addActionListener(e -> {
             cardLayout.show(mainPanel, "Juego");
             gamePanel.requestFocus(); // activar teclado
