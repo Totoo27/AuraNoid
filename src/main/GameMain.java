@@ -13,7 +13,7 @@ public class GameMain extends JFrame {
     private JPanel mainPanel;
     private GamePanel gamePanel;
     
-    public static Font Pixelart; // <- aquí es accesible desde otras clases
+    public static Font Pixelart; // para acceder desde otras clases
 
     
     public GameMain() {
@@ -28,10 +28,10 @@ public class GameMain extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
-        // 🔹 Crear menú
+        // Crear menú
         JPanel menuPanel = crearMenu();
 
-        // 🔹 Crear juego
+        // Crear juego
         gamePanel = new GamePanel();
         GamePanel.reproducirMusica("src/sonidos/musica.wav");
 
